@@ -1,0 +1,7 @@
+builds:
+- id: default
+  dir: .  # default is .
+  flags:
+  - -trimpath
+  ldflags:
+  - -s -w

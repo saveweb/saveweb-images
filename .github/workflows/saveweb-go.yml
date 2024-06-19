@@ -1,0 +1,103 @@
+name: ko-built saveweb Images
+
+on:
+  push:
+    branches:
+    - 'master'
+    paths:
+    - '.github/workflows/saveweb-go.yml'
+  schedule:
+  - cron: "20 * * * *"
+  workflow_dispatch:
+
+env:
+  REGISTRY_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/saveweb
+
+jobs:
+  huashijie:
+    name: Build the huashijie image with ko
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch the latest tag
+        shell: bash
+        run: |
+          curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
+          huashijie_go_latest_tag=$(curl -L https://git.saveweb.org/saveweb/huashijie_go/tags/list \
+              | jq -r .results[] | sort -Vr | head -n 1)
+          if [[ -z "$huashijie_go_latest_tag" ]]; then
+              echo "FATAL: huashijie_go_latest_tag is empty!"
+              exit 1
+          fi
+
+          echo "huashijie_go_latest_tag=${huashijie_go_latest_tag}" >> "$GITHUB_ENV"
+
+      - name: Checkout git repo
+        shell: bash
+        run: |
+          git clone -j "$(nproc)" \
+              --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
+              --branch "$huashijie_go_latest_tag" \
+              "https://git.saveweb.org/saveweb/huashijie_go.git" \
+              ./
+
+          curl -o '.ko.yaml' -- \
+              https://raw.githubusercontent.com/saveweb/saveweb-images/master/default.ko.yaml
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: ko-build/setup-ko@v0.6
+        env:
+          KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
+      - run: ko build --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie' ./cmd/...
+
+  acdanmaku:
+    name: Build the acdanmaku image with ko
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch the latest tag
+        shell: bash
+        run: |
+          curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
+          acdanmaku_go_latest_tag=$(curl -L https://git.saveweb.org/saveweb/acfunction_go/tags/list \
+              | jq -r .results[] | sort -Vr | head -n 1)
+          if [[ -z "$acdanmaku_go_latest_tag" ]]; then
+              echo "FATAL: acdanmaku_go_latest_tag is empty!"
+              exit 1
+          fi
+
+          echo "acdanmaku_go_latest_tag=${acdanmaku_go_latest_tag}" >> "$GITHUB_ENV"
+
+      - name: Checkout git repo
+        shell: bash
+        run: |
+          git clone -j "$(nproc)" \
+              --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
+              --branch "$acdanmaku_go_latest_tag" \
+              "https://git.saveweb.org/saveweb/acfunction_go.git" \
+              ./
+
+          curl -o '.ko.yaml' -- \
+              https://raw.githubusercontent.com/saveweb/saveweb-images/master/default.ko.yaml
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: ko-build/setup-ko@v0.6
+        env:
+          KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
+      - run: ko build --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku' ./cmd/...
