@@ -36,6 +36,7 @@ for _cname in acdanmaku huashijie lowapk-v2; do
         && docker stop "${_cname}"
     docker rm -f "${_cname}" \
         && docker run --env ARCHIVIST="$ARCHIVIST" --restart always \
+            --volume /etc/localtime:/etc/localtime:ro \
             --cpu-shares 512 --memory 512M --memory-swap 512M \
             --detach  --name "${_cname}" \
             "${_image}"
