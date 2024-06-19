@@ -31,10 +31,13 @@ if [[ -z "$ARCHIVIST" ]]; then
     exit 1
 fi
 for _cname in acdanmaku huashijie lowapk-v2; do
-    docker pull "icecodexi/saveweb:${_cname}"
+    _image="icecodexi/saveweb:${_cname}"
+    docker pull "${_image}" \
+        && docker stop "${_cname}"
     docker rm -f "${_cname}" \
-        && docker run --env ARCHIVIST="$ARCHIVIST" --restart always --name "${_cname}" \
+        && docker run --env ARCHIVIST="$ARCHIVIST" --restart always \
             --cpu-shares 512 --memory 512M --memory-swap 512M \
-            --detach "icecodexi/saveweb:${_cname}"
+            --detach  --name "${_cname}" \
+            "${_image}"
 done
 ```
