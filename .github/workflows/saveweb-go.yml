@@ -41,7 +41,7 @@ jobs:
               ./
 
           curl -o '.ko.yaml' -- \
-              https://raw.githubusercontent.com/saveweb/saveweb-images/master/default.ko.yaml
+              https://raw.githubusercontent.com/saveweb/saveweb-images/master/prod.ko.yaml
 
       - uses: actions/setup-go@v5
         with:
@@ -56,7 +56,7 @@ jobs:
       - uses: ko-build/setup-ko@v0.6
         env:
           KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
-      - run: ko build --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie' ./cmd/...
+      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie'
 
   acdanmaku:
     name: Build the acdanmaku image with ko
@@ -85,7 +85,7 @@ jobs:
               ./
 
           curl -o '.ko.yaml' -- \
-              https://raw.githubusercontent.com/saveweb/saveweb-images/master/default.ko.yaml
+              https://raw.githubusercontent.com/saveweb/saveweb-images/master/prod.ko.yaml
 
       - uses: actions/setup-go@v5
         with:
@@ -100,4 +100,4 @@ jobs:
       - uses: ko-build/setup-ko@v0.6
         env:
           KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
-      - run: ko build --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku' ./cmd/...
+      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku'
