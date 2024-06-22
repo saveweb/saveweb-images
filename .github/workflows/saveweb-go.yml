@@ -57,6 +57,7 @@ jobs:
         env:
           KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
       - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie'
+      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie-debug' --debug
 
   acdanmaku:
     name: Build the acdanmaku image with ko
@@ -101,3 +102,4 @@ jobs:
         env:
           KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
       - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku'
+      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku-debug' --debug
