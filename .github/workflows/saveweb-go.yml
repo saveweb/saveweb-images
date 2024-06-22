@@ -14,79 +14,51 @@ env:
   REGISTRY_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/saveweb
 
 jobs:
-  huashijie:
-    name: Build the huashijie image with ko
+  ko-build-images:
+    name: build images with ko-build
     runs-on: ubuntu-24.04
     steps:
       - name: Fetch the latest tag
         shell: bash
         run: |
           curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
-          huashijie_go_latest_tag=$(curl -L https://git.saveweb.org/saveweb/huashijie_go/tags/list \
+
+          acdanmaku_go_repo='git.saveweb.org/saveweb/acfunction_go'
+          acdanmaku_go_latest_tag=$(curl -L -- "https://${acdanmaku_go_repo}/tags/list" \
               | jq -r .results[] | sort -Vr | head -n 1)
-          if [[ -z "$huashijie_go_latest_tag" ]]; then
-              echo "FATAL: huashijie_go_latest_tag is empty!"
-              exit 1
-          fi
 
-          echo "huashijie_go_latest_tag=${huashijie_go_latest_tag}" >> "$GITHUB_ENV"
+          huashijie_go_repo='git.saveweb.org/saveweb/huashijie_go'
+          huashijie_go_latest_tag=$(curl -L -- "https://${huashijie_go_repo}/tags/list" \
+              | jq -r .results[] | sort -Vr | head -n 1)
 
-      - name: Checkout git repo
-        shell: bash
-        run: |
-          git clone -j "$(nproc)" \
-              --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
-              --branch "$huashijie_go_latest_tag" \
-              "https://git.saveweb.org/saveweb/huashijie_go.git" \
-              ./
+          for _var in acdanmaku_go_latest_tag \
+                      huashijie_go_latest_tag; do
+              if [[ -z "${!_var}" ]]; then
+                  echo "FATAL: ${_var} is empty!"
+                  exit 1
+              fi
+              echo "${_var}=${!_var}" >> "$GITHUB_ENV"
+          done
+          echo "acdanmaku_go_repo=${acdanmaku_go_repo}" >> "$GITHUB_ENV"
+          echo "huashijie_go_repo=${huashijie_go_repo}" >> "$GITHUB_ENV"
 
           curl -o '.ko.yaml' -- \
               https://raw.githubusercontent.com/saveweb/saveweb-images/master/prod.ko.yaml
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-          check-latest: true
-
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - uses: ko-build/setup-ko@v0.6
-        env:
-          KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
-      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie'
-      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie-debug' --debug
-
-  acdanmaku:
-    name: Build the acdanmaku image with ko
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Fetch the latest tag
-        shell: bash
-        run: |
-          curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
-          acdanmaku_go_latest_tag=$(curl -L https://git.saveweb.org/saveweb/acfunction_go/tags/list \
-              | jq -r .results[] | sort -Vr | head -n 1)
-          if [[ -z "$acdanmaku_go_latest_tag" ]]; then
-              echo "FATAL: acdanmaku_go_latest_tag is empty!"
-              exit 1
-          fi
-
-          echo "acdanmaku_go_latest_tag=${acdanmaku_go_latest_tag}" >> "$GITHUB_ENV"
-
-      - name: Checkout git repo
+      - name: Clone the git repos
         shell: bash
         run: |
           git clone -j "$(nproc)" \
               --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
               --branch "$acdanmaku_go_latest_tag" \
-              "https://git.saveweb.org/saveweb/acfunction_go.git" \
-              ./
+              "https://${acdanmaku_go_repo}.git"
+          cp .ko.yaml ./acfunction_go/
 
-          curl -o '.ko.yaml' -- \
-              https://raw.githubusercontent.com/saveweb/saveweb-images/master/prod.ko.yaml
+          git clone -j "$(nproc)" \
+              --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
+              --branch "$huashijie_go_latest_tag" \
+              "https://${huashijie_go_repo}.git"
+          cp .ko.yaml ./huashijie_go/
 
       - uses: actions/setup-go@v5
         with:
@@ -98,8 +70,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: ko-build/setup-ko@v0.6
+      - uses: ko-build/setup-ko@v0.7
         env:
           KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
+        with:
+          version: tip
+
+      # TODO: issue the ko-build commands in parallel, while keeping the ko command from been installed for several times
       - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku'
-      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku-debug' --debug
+        working-directory: ./acfunction_go
+      - run: |
+          rm -f ./.ko.yaml
+          ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku-debug' --debug
+        working-directory: ./acfunction_go
+
+      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie'
+        working-directory: ./huashijie_go
+      - run: |
+          rm -f ./.ko.yaml
+          ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie-debug' --debug
+        working-directory: ./huashijie_go
