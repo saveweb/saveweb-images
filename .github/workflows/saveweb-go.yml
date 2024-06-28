@@ -23,23 +23,17 @@ jobs:
         run: |
           curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
 
-          acdanmaku_go_repo='git.saveweb.org/saveweb/acfunction_go'
-          acdanmaku_go_latest_tag=$(curl -L -- "https://${acdanmaku_go_repo}/tags/list" \
-              | jq -r .results[] | sort -Vr | head -n 1)
-
           huashijie_go_repo='git.saveweb.org/saveweb/huashijie_go'
           huashijie_go_latest_tag=$(curl -L -- "https://${huashijie_go_repo}/tags/list" \
               | jq -r .results[] | sort -Vr | head -n 1)
 
-          for _var in acdanmaku_go_latest_tag \
-                      huashijie_go_latest_tag; do
+          for _var in huashijie_go_latest_tag; do
               if [[ -z "${!_var}" ]]; then
                   echo "FATAL: ${_var} is empty!"
                   exit 1
               fi
               echo "${_var}=${!_var}" >> "$GITHUB_ENV"
           done
-          echo "acdanmaku_go_repo=${acdanmaku_go_repo}" >> "$GITHUB_ENV"
           echo "huashijie_go_repo=${huashijie_go_repo}" >> "$GITHUB_ENV"
 
           curl -o '.ko.yaml' -- \
@@ -48,12 +42,6 @@ jobs:
       - name: Clone the git repos
         shell: bash
         run: |
-          git clone -j "$(nproc)" \
-              --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
-              --branch "$acdanmaku_go_latest_tag" \
-              "https://${acdanmaku_go_repo}.git"
-          cp .ko.yaml ./acfunction_go/
-
           git clone -j "$(nproc)" \
               --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
               --branch "$huashijie_go_latest_tag" \
@@ -77,13 +65,6 @@ jobs:
           version: tip
 
       # TODO: issue the ko-build commands in parallel, while keeping the ko command from been installed for several times
-      - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku'
-        working-directory: ./acfunction_go
-      - run: |
-          rm -f ./.ko.yaml
-          ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'acdanmaku-debug' --debug
-        working-directory: ./acfunction_go
-
       - run: ko build ./cmd/... --platform=linux/amd64,linux/arm64 --bare --tags 'huashijie'
         working-directory: ./huashijie_go
       - run: |

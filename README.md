@@ -5,7 +5,7 @@
 
 ## 注意事项
 
-* 不可在相同 IP 下创建同一抓取程序的多个实例（如 huashijie-1, huashijie-2）。不同抓取程序可共存（如 huashijie, acdanmaku）
+* 不可在相同 IP 下创建同一抓取程序的多个实例（如 huashijie-1, huashijie-2）。不同抓取程序可共存（如 huashijie, lowapk-v2）
 * 执行下面的启动命令前，请为自己选择一个可以用来识别自己贡献的贡献者 ID。如 `export ARCHIVIST=alice`。 (允许的字符: `A-z`, `0-9`, `-`, `_`)
    * 如果你有多台机器，建议每台机器设置不同的 `ARCHIVIST`（比如 `alice-aws-us1` `alice-ali-zj3`），以防某台机器出错过多被 tracker 列入黑名单而影响同名 `ARCHIVIST` 机器。
    * 虽然没人为限制，但 `ARCHIVIST` 名不宜过长，每一亿个任务，`ARCHIVIST` 字段每多一个字节就额外需要 100MB 存储空间。
@@ -35,7 +35,7 @@ if [[ -z "$ARCHIVIST" ]]; then
     echo "WARN: ARCHIVIST must be set"
     exit 1
 fi
-for _cname in acdanmaku huashijie lowapk-v2; do
+for _cname in huashijie lowapk-v2; do
     _image="icecodexi/saveweb:${_cname}"
     docker pull "${_image}" \
         && docker stop "${_cname}"
