@@ -44,6 +44,7 @@ for _cname in cnblogs huashijie lowapk-v2; do
             --volume /etc/localtime:/etc/localtime:ro \
             --cpu-shares 512 --memory 512M --memory-swap 512M \
             --detach  --name "${_cname}" \
+            --label=com.centurylinklabs.watchtower.enable=true \
             "${_image}"
 done
 ```
