@@ -21,7 +21,7 @@ jobs:
       - name: Fetch the latest tag
         shell: bash
         run: |
-          set -e
+          set -eo pipefail
           curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
 
           cnblogs_repo='git.saveweb.org/saveweb/cnblogs'
@@ -51,7 +51,7 @@ jobs:
       - name: Clone the git repos
         shell: bash
         run: |
-          set -e
+          set -eo pipefail
           git_clone() {
               git clone -j "$(nproc)" \
                   --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
@@ -76,23 +76,32 @@ jobs:
               git_clone --branch "$ref" -- "$git_repo" || exit 1
               cp .ko.yaml "./${repo_dir%%.git}/"
           }
+          export -f git_clone
+          export -f clone_with_ref_and_ko_conf
+
+          clone_project() {
+              local project="$1"
+              local tag_varname="${project}_latest_tag"
+              local repo_varname="${project}_repo"
+              
+              clone_with_ref_and_ko_conf \
+                  "https://${!repo_varname}.git" \
+                  "${!tag_varname}"
+          }
+          export -f clone_project
+
+          main() {
+              local projects=(
+                  cnblogs
+                  huashijie_go
+              )
+              printf '%s\0' "${projects[@]}" \
+                  | xargs -0 -r -I {} -P 2 bash -c 'clone_project "{}"'
+          }
 
           set -x
           pwd
-          for project in \
-              cnblogs \
-              huashijie_go \
-              ; do
-              # sleep 3s before starting another task
-              sleep 3
-
-               tag_varname="${project}_latest_tag"
-              repo_varname="${project}_repo"
-              clone_with_ref_and_ko_conf \
-                  "https://${!repo_varname}.git" \
-                  "${!tag_varname}" &
-          done
-          wait
+          main
 
       - uses: actions/setup-go@v5
         with:
@@ -113,7 +122,7 @@ jobs:
       - name: Build the container images
         shell: bash
         run: |
-          set -e
+          set -eo pipefail
           ko-build() {
               # check whether the script is executed inside a git repo
               if [[ "$(git rev-parse --is-inside-work-tree)" != 'true' ]]; then
@@ -138,23 +147,29 @@ jobs:
               rm -f ./.ko.yaml
               ko build "${cmd_dir}/..." --platform=linux/amd64,linux/arm64 --bare --tags "${project}-debug" --debug || exit 1
           }
+          export -f ko-build
 
+          build_project() {
+              local project="$1"
+              local repo_varname="${project}_repo"
+              local repo_dir="${!repo_varname##*/}"
+              (
+                  set -eo pipefail
+                  cd "./${repo_dir}/" || exit 1
+                  ko-build './cmd/' "${project}"
+              )
+          }
+          export -f build_project
+
+          main() {
+              local projects=(
+                  cnblogs
+                  huashijie_go
+              )
+              printf '%s\0' "${projects[@]}" \
+                  | xargs -0 -r -I {} -P 2 bash -c 'build_project "{}"'
+          }
+          
           set -x
           pwd
-          for project in \
-              cnblogs \
-              huashijie_go \
-              ; do
-              # sleep 3s before starting another task
-              sleep 3
-
-              repo_varname="${project}_repo"
-              repo_dir="${!repo_varname##*/}"
-              (
-                  cd "./${repo_dir}/" || exit 1
-                  ko-build \
-                      './cmd/' \
-                      "${project}" &
-              )
-          done
-          wait
+          main
