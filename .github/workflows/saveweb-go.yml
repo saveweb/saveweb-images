@@ -155,6 +155,8 @@ jobs:
               local repo_dir="${!repo_varname##*/}"
               (
                   set -eo pipefail
+                  # ugly fix
+                  [[ "$project" = 'huashijie_go' ]] && project='huashijie'
                   cd "./${repo_dir}/" || exit 1
                   ko-build './cmd/' "${project}"
               )
