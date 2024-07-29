@@ -35,7 +35,7 @@ if [[ -z "$ARCHIVIST" ]]; then
     echo "WARN: ARCHIVIST must be set"
     exit 1
 fi
-for _cname in cnblogs huashijie lowapk-v2; do
+for _cname in huashijie lowapk-v2; do
     _image="icecodexi/saveweb:${_cname}"
     docker pull "${_image}" \
         && docker stop "${_cname}"
