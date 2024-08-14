@@ -43,7 +43,7 @@ for _cname in huashijie lowapk-v2; do
         && docker run --env ARCHIVIST="$ARCHIVIST" --restart always \
             --volume /etc/localtime:/etc/localtime:ro \
             --cpu-shares 512 --memory 512M --memory-swap 512M \
-            --detach  --name "${_cname}" \
+            --detach  --name "${_cname}" --init \
             --label=com.centurylinklabs.watchtower.enable=true \
             "${_image}"
 done
