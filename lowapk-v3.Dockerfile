@@ -25,7 +25,7 @@ ENV PATH="/home/nonroot/.local/bin:${PATH}" \
 USER nonroot:nonroot
 WORKDIR /home/nonroot/
 RUN uv --no-progress tool install \
-        'https://static.saveweb.org/lowapk-3.0.0-py3-none-any.whl'
+        'https://static.saveweb.org/lowapk-3.0.2-py3-none-any.whl'
 
 
 FROM cgr.dev/chainguard/python:latest
