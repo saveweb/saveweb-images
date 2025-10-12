@@ -113,7 +113,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: ko-build/setup-ko@v0.7
+      - uses: ko-build/setup-ko@v0.9
         env:
           KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
 
