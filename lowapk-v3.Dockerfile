@@ -37,4 +37,5 @@ WORKDIR /home/nonroot/
 
 ENV TZ=Asia/Taipei
 ENV LD_PRELOAD=/usr/lib/libsnmallocshim-checks.so
+ENV PYTHONUNBUFFERED=x
 ENTRYPOINT [ "/home/nonroot/.local/bin/lowapk" ]
