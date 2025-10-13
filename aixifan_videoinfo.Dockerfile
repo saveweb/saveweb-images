@@ -25,7 +25,7 @@ ENV PATH="/home/nonroot/.local/bin:${PATH}" \
 USER nonroot:nonroot
 WORKDIR /home/nonroot/
 RUN uv --no-progress tool install \
-        'git+https://git.saveweb.org/saveweb/aixifan_videoinfo@v0.2.0'
+        'git+https://git.saveweb.org/saveweb/aixifan_videoinfo@v0.2.1'
 
 
 FROM cgr.dev/chainguard/python:latest
