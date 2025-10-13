@@ -63,7 +63,7 @@ else:
 
 _image = "icecodexi/saveweb:{_cname}"
 
-for _cname in ["lowapk-v3"]:
+for _cname in ["lowapk-v3","acfunction","aixifan_videoinfo"]:
     # subprocess.run(args_list, check=True)
     __cname = _cname
     __image = _image.replace("{_cname}", __cname)
@@ -79,4 +79,5 @@ for _cname in ["lowapk-v3"]:
     os.system(f"docker stop {__cname}")
     os.system(f"docker rm -f {__cname}")
     os.system(f"docker run {" ".join(__command)}")
+
 ```
