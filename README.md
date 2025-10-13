@@ -37,6 +37,7 @@ if [[ -z "$ARCHIVIST" ]]; then
 fi
 for _cname in \
     acfunction \
+    aixifan_videoinfo \
     lowapk-v3 \
     ; do
     _image="icecodexi/saveweb:${_cname}"
