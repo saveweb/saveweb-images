@@ -35,7 +35,10 @@ if [[ -z "$ARCHIVIST" ]]; then
     echo "WARN: ARCHIVIST must be set"
     exit 1
 fi
-for _cname in lowapk-v3; do
+for _cname in \
+    acfunction \
+    lowapk-v3 \
+    ; do
     _image="icecodexi/saveweb:${_cname}"
     docker pull "${_image}" \
         && docker stop "${_cname}"

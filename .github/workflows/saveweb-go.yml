@@ -1,0 +1,167 @@
+name: ko-built saveweb Images
+
+on:
+  push:
+    branches:
+    - 'master'
+    paths:
+    - '.github/workflows/saveweb-go.yml'
+  schedule:
+  - cron: "20 20 1-31/10 * *"
+  workflow_dispatch:
+
+env:
+  REGISTRY_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/saveweb
+
+jobs:
+  ko-build-images:
+    name: build images with ko-build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch the latest tag
+        shell: bash
+        run: |
+          set -eo pipefail
+          curl() { $(type -P curl) -LRq --retry 5 --retry-delay 10 --retry-max-time 60 --fail "$@"; }
+
+          acfunction_go_repo='git.saveweb.org/saveweb/acfunction_go'
+          acfunction_go_latest_tag=$(curl -L -- "https://${acfunction_go_repo%%.git}/tags/list" \
+              | jq -r .results[] | sort -Vr | head -n 1)
+
+          for _var in \
+              acfunction_go_latest_tag \
+              ; do
+              if [[ -z "${!_var}" ]]; then
+                  echo "FATAL: ${_var} is empty!"
+                  exit 1
+              fi
+              echo "${_var}=${!_var}" >> "$GITHUB_ENV"
+          done
+          echo "acfunction_go_repo=${acfunction_go_repo%%.git}" >> "$GITHUB_ENV"
+
+          curl -o '.ko.yaml' -- \
+              https://raw.githubusercontent.com/saveweb/saveweb-images/master/prod.ko.yaml
+
+      - name: Clone the git repos
+        shell: bash
+        run: |
+          set -eo pipefail
+          git_clone() {
+              git clone -j "$(nproc)" \
+                  --no-tags --shallow-submodules --recurse-submodules --depth 1 --single-branch \
+                  "$@";
+          }
+          clone_with_ref_and_ko_conf() {
+              if [ "$#" -ne 2 ]; then
+                  echo "Usage: clone_with_ref_and_ko_conf <git_repo> <ref>"
+                  return 1
+              fi
+              local git_repo="$1"
+              local ref="$2"
+
+              for _var in git_repo ref; do
+                  if [[ -z "${!_var}" ]]; then
+                      echo "FATAL: ${_var} is empty!"
+                      exit 1
+                  fi
+              done
+
+              local repo_dir="${git_repo##*/}"
+              git_clone --branch "$ref" -- "$git_repo" || exit 1
+              cp -af .ko.yaml "./${repo_dir%%.git}/"
+          }
+          export -f git_clone
+          export -f clone_with_ref_and_ko_conf
+
+          clone_project() {
+              local project="$1"
+              local tag_varname="${project}_latest_tag"
+              local repo_varname="${project}_repo"
+
+              clone_with_ref_and_ko_conf \
+                  "https://${!repo_varname}.git" \
+                  "${!tag_varname}"
+          }
+          export -f clone_project
+
+          main() {
+              local projects=(
+                  acfunction_go
+              )
+              printf '%s\0' "${projects[@]}" \
+                  | xargs -0 -r -I {} -P 2 bash -c 'clone_project "{}"'
+          }
+
+          set -x
+          pwd
+          main
+
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
+        env:
+          KO_DOCKER_REPO: docker.io/${{ env.REGISTRY_IMAGE }}
+
+      - name: Build the container images
+        shell: bash
+        run: |
+          set -eo pipefail
+          ko-build() {
+              # check whether the script is executed inside a git repo
+              if [[ "$(git rev-parse --is-inside-work-tree)" != 'true' ]]; then
+                  echo "FATAL: this script MUST be executed inside a git repo."
+                  exit 1
+              fi
+
+              if [ "$#" -ne 2 ]; then
+                  echo "Usage: ko-build <cmd_dir> <project>"
+                  return 1
+              fi
+              local cmd_dir="$1"
+              local project="$2"
+              for _var in cmd_dir project; do
+                  if [[ -z "${!_var}" ]]; then
+                      echo "FATAL: ${_var} is empty!"
+                      exit 1
+                  fi
+              done
+
+              ko build "${cmd_dir}/..." --platform=linux/amd64,linux/arm64 --bare --tags "${project}" || exit 1
+              rm -f ./.ko.yaml
+              ko build "${cmd_dir}/..." --platform=linux/amd64,linux/arm64 --bare --tags "${project}-debug" --debug || exit 1
+          }
+          export -f ko-build
+
+          build_project() {
+              local project="$1"
+              local repo_varname="${project}_repo"
+              local repo_dir="${!repo_varname##*/}"
+              (
+                  set -eo pipefail
+                  # ugly fix
+                  [[ "$project" = 'acfunction_go' ]] && project='acfunction'
+                  cd "./${repo_dir}/" || exit 1
+                  ko-build './cmd/' "${project}"
+              )
+          }
+          export -f build_project
+
+          main() {
+              local projects=(
+                  acfunction_go
+              )
+              printf '%s\0' "${projects[@]}" \
+                  | xargs -0 -r -I {} -P 2 bash -c 'build_project "{}"'
+          }
+
+          set -x
+          pwd
+          main
