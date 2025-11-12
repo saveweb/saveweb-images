@@ -15,7 +15,7 @@
 0. （可选）推荐部署 watchtower 容器实现容器镜像自动更新
 
 ```bash
-sudo docker pull containrrr/watchtower
+sudo docker pull nickfedor/watchtower
 sudo docker rm -f watchtower \
     && sudo docker run -d \
     -v /var/run/docker.sock:/var/run/docker.sock -v /etc/localtime:/etc/localtime:ro \
@@ -25,7 +25,7 @@ sudo docker rm -f watchtower \
     -e 'WATCHTOWER_INCLUDE_STOPPED=true' \
     -e 'WATCHTOWER_REVIVE_STOPPED=true' \
     --name watchtower --restart unless-stopped \
-    containrrr/watchtower
+    nickfedor/watchtower
 ```
 
 1. 部署所有 saveweb worker 容器
