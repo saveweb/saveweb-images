@@ -52,3 +52,36 @@ for _cname in \
             "${_image}"
 done
 ```
+
+For windows user: （真的会有吗？）
+
+```python
+import os
+import sys
+
+if os.environ.get("ARCHIVIST", None) is None:
+    print("WARN: ARCHIVIST must be set")
+    sys.exit(1)
+else:
+    __ARCHIVIST = os.environ["ARCHIVIST"]
+
+_image = "icecodexi/saveweb:{_cname}"
+
+for _cname in ["lowapk-v3","acfunction","aixifan_videoinfo"]:
+    # subprocess.run(args_list, check=True)
+    __cname = _cname
+    __image = _image.replace("{_cname}", __cname)
+    __command = [
+        f'--env ARCHIVIST="{__ARCHIVIST}" --restart always',
+        "--volume /etc/localtime:/etc/localtime:ro",
+        "--cpu-shares 512 --memory 512M --memory-swap 512M",
+        f'--detach  --name "{__cname}" --init',
+        "--label=com.centurylinklabs.watchtower.enable=true",
+        f'"{__image}"',
+    ]
+    os.system(f"docker pull {__image}")
+    os.system(f"docker stop {__cname}")
+    os.system(f"docker rm -f {__cname}")
+    os.system(f"docker run {" ".join(__command)}")
+
+```
